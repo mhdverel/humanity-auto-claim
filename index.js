@@ -11,12 +11,17 @@ const TOKEN = fs.readFileSync("token.txt", "utf-8").trim();
 const PROXIES = fs.readFileSync("proxy.txt", "utf-8").split("\n").map(p => p.trim()).filter(Boolean);
 
 function getRandomProxy() {
-  const proxy = PROXIES[Math.floor(Math.random() * PROXIES.length)];
-  return new HttpsProxyAgent(proxy);
+  // Jika proxy.txt tidak kosong, ambil proxy secara acak
+  if (PROXIES.length > 0) {
+    const proxy = PROXIES[Math.floor(Math.random() * PROXIES.length)];
+    return new HttpsProxyAgent(proxy);
+  }
+  // Jika proxy.txt kosong, kembalikan null (tanpa proxy)
+  return null;
 }
 
 const jar = new CookieJar();
-const agent = getRandomProxy();
+const agent = getRandomProxy(); // Agent menggunakan proxy jika ada, atau null jika tidak ada
 const fetchWithCookies = fetchCookie(fetch, jar);
 
 const headers = {
@@ -37,7 +42,7 @@ async function call(endpoint, method = "POST", body = {}) {
   const res = await fetchWithCookies(url, {
     method,
     headers,
-    agent,
+    agent, // Gunakan agent jika ada, atau null jika tidak ada
     body: method === "GET" ? undefined : JSON.stringify(body)
   });
 
@@ -95,7 +100,7 @@ async function run() {
       await new Promise(resolve => setTimeout(resolve, 60000));
     }
   } catch (err) {
-    console.error("❌ Failed:", err.message);
+    console.error("❌ Gagal:", err.message);
     console.log("⏳ Waiting 1 minute before retrying...");
     await new Promise(resolve => setTimeout(resolve, 60000));
     run(); // Retry
