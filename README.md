@@ -24,7 +24,7 @@ A Node.js script to automatically claim daily rewards from the Humanity Protocol
 1. Clone this repository:
 
 ```bash
-git clone https://github.com/your-username/humanity-auto-claim.git
+git clone https://github.com/fadhielnaufan/humanity-auto-claim.git
 cd humanity-auto-claim
 
 
