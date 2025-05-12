@@ -7,104 +7,122 @@ import figlet from "figlet";
 import chalk from "chalk";
 
 const BASE_URL = "https://testnet.humanity.org";
-const TOKEN = fs.readFileSync("token.txt", "utf-8").trim();
+const TOKENS = fs.readFileSync("token.txt", "utf-8").split("\n").map(t => t.trim()).filter(Boolean);
 const PROXIES = fs.readFileSync("proxy.txt", "utf-8").split("\n").map(p => p.trim()).filter(Boolean);
 
-function getRandomProxy() {
-  // Jika proxy.txt tidak kosong, ambil proxy secara acak
-  if (PROXIES.length > 0) {
-    const proxy = PROXIES[Math.floor(Math.random() * PROXIES.length)];
-    return new HttpsProxyAgent(proxy);
-  }
-  // Jika proxy.txt kosong, kembalikan null (tanpa proxy)
-  return null;
-}
-
-const jar = new CookieJar();
-const agent = getRandomProxy(); // Agent menggunakan proxy jika ada, atau null jika tidak ada
-const fetchWithCookies = fetchCookie(fetch, jar);
-
-const headers = {
-  "accept": "application/json, text/plain, */*",
-  "content-type": "application/json",
-  "authorization": `Bearer ${TOKEN}`,
-  "token": TOKEN,
-  "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36"
-};
-
-// 🎨 Tampilkan banner saat program dijalankan
+// 🎨 Banner hanya tampil sekali
 function showBanner() {
   console.log(chalk.green(figlet.textSync("Humanity Auto Claim", { horizontalLayout: "default" })));
 }
 
-async function call(endpoint, method = "POST", body = {}) {
+function getRandomProxy() {
+  if (PROXIES.length === 0) return null;
+  const proxy = PROXIES[Math.floor(Math.random() * PROXIES.length)];
+  return new HttpsProxyAgent(proxy);
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function call(fetchWithCookies, agent, token, endpoint, method = "POST", body = {}) {
   const url = BASE_URL + endpoint;
   const res = await fetchWithCookies(url, {
     method,
-    headers,
-    agent, // Gunakan agent jika ada, atau null jika tidak ada
+    headers: {
+      "accept": "application/json, text/plain, */*",
+      "content-type": "application/json",
+      "authorization": `Bearer ${token}`,
+      "token": token,
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/136.0.0.0 Safari/537.36"
+    },
+    agent,
     body: method === "GET" ? undefined : JSON.stringify(body)
   });
 
   const responseData = await res.json();
-  if (!res.ok) {
-    throw new Error(`${res.status} ${res.statusText}`);
-  }
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} - ${JSON.stringify(responseData)}`);
   return responseData;
 }
 
-async function run() {
-  // Tampilkan banner hanya sekali di awal
-  showBanner();
-
+async function getPublicIP(agent) {
   try {
-    while (true) {
-      const userInfo = await call("/api/user/userInfo");
-      console.log("✅ User Info:", userInfo.data.nickName);
-      console.log("✅ Wallet:", userInfo.data.ethAddress);
-
-      const balance = await call("/api/rewards/balance", "GET");
-      console.log("💰 Total Reward:", balance.balance.total_rewards);
-
-      const rewardStatus = await call("/api/rewards/daily/check");
-      console.log("📊 Reward Status:", rewardStatus);
-
-      if (!rewardStatus) {
-        console.log("❌ Invalid reward status data");
-        return;
-      }
-
-      if (!rewardStatus.available) {
-        const nextClaimTime = new Date(rewardStatus.next_daily_award).getTime();
-        const now = Date.now();
-        const waitHours = Math.floor((nextClaimTime - now) / 3600000);
-        console.log(`❌ ${rewardStatus.message}. Try again in ${waitHours} hours.`);
-
-        const waitTime = nextClaimTime - now;
-        console.log(`⏳ Waiting ${waitHours} hours for next claim...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        continue;
-      }
-
-      const claim = await call("/api/rewards/daily/claim");
-      console.log("🎉 Claim berhasil:", claim.data.amount);
-
-      const updatedUserInfo = await call("/api/user/userInfo");
-      console.log("✅ User Info:", updatedUserInfo.data.nickName);
-      console.log("✅ Wallet:", updatedUserInfo.data.ethAddress);
-
-      const updatedBalance = await call("/api/rewards/balance", "GET");
-      console.log("💰 Total Reward:", updatedBalance.balance.total_rewards);
-
-      console.log("⏳ Waiting 1 minute for next check...");
-      await new Promise(resolve => setTimeout(resolve, 60000));
-    }
-  } catch (err) {
-    console.error("❌ Gagal:", err.message);
-    console.log("⏳ Waiting 1 minute before retrying...");
-    await new Promise(resolve => setTimeout(resolve, 60000));
-    run(); // Retry
+    const res = await fetch("https://api.ipify.org?format=json", { agent, timeout: 10000 });
+    const data = await res.json();
+    return data.ip;
+  } catch {
+    return "Unable to fetch IP";
   }
 }
 
-run();
+
+async function runAccount(index, token) {
+  const proxy = getRandomProxy();
+  const jar = new CookieJar();
+  const fetchWithCookies = fetchCookie(fetch, jar);
+  const publicIP = await getPublicIP(proxy);
+  let firstLoop = true;
+
+  while (true) {
+    try {
+      if (firstLoop) {
+        await delay((index - 1) * 15000); // delay antar akun
+        firstLoop = false;
+      }
+
+      const userInfo = await call(fetchWithCookies, proxy, token, "/api/user/userInfo");
+      const nickname = userInfo.data.nickName;
+      const wallet = userInfo.data.ethAddress;
+
+      console.log(chalk.cyan(`[${index}] 👤 ${nickname} (${wallet})`));
+      console.log(`[${index}] 🌐 Proxy IP: ${publicIP}`);
+
+      const balance = await call(fetchWithCookies, proxy, token, "/api/rewards/balance", "GET");
+      console.log(`[${index}] 💰 Total Reward: ${balance.balance.total_rewards}`);
+
+      const rewardStatus = await call(fetchWithCookies, proxy, token, "/api/rewards/daily/check");
+
+      if (!rewardStatus.available) {
+        const nextTime = new Date(rewardStatus.next_daily_award).getTime();
+        const now = Date.now();
+        const waitMs = nextTime - now;
+        const waitH = Math.ceil(waitMs / 3600000);
+        console.log(`[${index}] ❌ ${rewardStatus.message}. Retry in ${waitH} hours.`);
+        await delay(waitMs);
+        continue;
+      }
+
+      const claim = await call(fetchWithCookies, proxy, token, "/api/rewards/daily/claim");
+      console.log(chalk.green(`[${index}] 🎉 Claimed ${claim.data.amount} successfully`));
+
+      const updatedBalance = await call(fetchWithCookies, proxy, token, "/api/rewards/balance", "GET");
+      console.log(`[${index}] 💰 Updated Reward: ${updatedBalance.balance.total_rewards}`);
+
+      console.log(`[${index}] ⏳ Waiting 1 minute for next check...`);
+      await delay(60000);
+
+    } catch (err) {
+      console.error(chalk.red(`[${index}] ❌ Error: ${err.message}`));
+      console.log(`[${index}] ⏳ Retrying in 1 minute...`);
+      await delay(60000);
+    }
+  }
+}
+
+
+async function main() {
+  showBanner();
+
+  if (TOKENS.length === 0) {
+    console.error("❌ Tidak ada token di 'token.txt'");
+    return;
+  }
+
+  console.log(`🔁 Menjalankan ${TOKENS.length} akun...\n`);
+  for (let i = 0; i < TOKENS.length; i++) {
+    runAccount(i + 1, TOKENS[i]);
+    await delay(1000); // delay kecil antar akun
+  }
+}
+
+main();
