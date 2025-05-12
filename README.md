@@ -1,91 +1,93 @@
+# 🤖 Humanity Auto Claim Bot
 
-# Humanity Auto Claim Bot
+**Auto-claim daily rewards on [Humanity Testnet](https://testnet.humanity.org) using multiple accounts with proxy support.**  
+Supports per-account proxy, colored logs, delay handling, and intelligent retries.
 
-A Node.js script to automatically claim daily rewards from the Humanity Protocol Testnet.
+---
 
-## ✨ Features
+## 🔧 Features
 
-- Automatically logs in and claims daily rewards
-- Checks user info and current balance
-- Waits 24 hours after a successful claim before re-claiming
-- Supports rotating proxies (HTTP/HTTPS)
-- Handles cookies and authentication
-- Robust error handling and retry mechanism
-- Console banner on startup
+- ✅ **Multi-account support** – load multiple tokens from `token.txt`
+- 🌐 **Proxy support** – assign a proxy to each account (from `proxy.txt`)
+- ⏱️ **15-second delay per account** to avoid simultaneous claims
+- 📆 **Daily reward check** – waits automatically until the next claim is available
+- 💡 **Displays public IP** used by each account's proxy
+- 🔁 **Auto-retry on errors**
+- 🎨 **Colorful and readable console output**
 
-## 🔧 Requirements
+---
 
-- Node.js 18+ (supports native ES Modules)
-- A valid Humanity Testnet token
-- List of working proxies (HTTP or HTTPS)
-
-## 📦 Installation
-
-1. Clone this repository:
-
-```bash
-git clone https://github.com/fadhielnaufan/humanity-auto-claim.git
-cd humanity-auto-claim
-```
-
-2. Install dependencies:
-
-```bash
-npm install node-fetch fetch-cookie tough-cookie https-proxy-agent figlet chalk
-```
-
-3. Create required files:
-
-* Create a file called token.txt and paste your Bearer token inside it:
-
-```txt
-your_token_here
-```
-
-* Create a file called proxy.txt and add one proxy per line:
-
-```txt
-http://username:password@proxy1.com:port
-http://username:password@proxy2.com:port
-```
-
-## 🚀 Usage
-
-To start the bot:
-
-```bash
-node index.js
-```
-
-The bot will:
-
-* Display your nickname and wallet address
-* Show your current reward balance
-* Automatically claim when reward is available
-* Wait 24 hours until next claim
-
-If the reward is not yet available, it will wait until the next eligible time and try again.
-
-## ⚠️ Warning
-
-* Do not share your Bearer token or proxies publicly.
-* Use at your own risk. The author is not responsible for any misuse or bans.
-
-## 📁 File Structure
+## 📂 File Structure
 
 ```
-.
-├── index.js           # Main bot script
-├── token.txt          # Bearer token file
-├── proxy.txt          # List of proxies
-├── package.json       # NPM config
-└── README.md          # Project documentation
+humanity-auto-claim/
+├── humanity.js          # Main script
+├── token.txt            # List of Humanity tokens (one per line)
+├── proxy.txt            # List of HTTP proxies (optional, one per line)
+├── package.json         # Dependencies and start script
+└── README.md            # You're reading this :)
 ```
 
-## 🧠 License
+---
 
-This project is licensed under the MIT License.
+## 📄 Example: `token.txt`
 
 ```
-Made with ❤️ by Fadhiel Naufan
+eyJhbGciOiJIUzI1NiIsInR5cCI6...
+eyJhbGciOiJIUzI1NiIsInR5cCI6...
 ```
+
+## 🌐 Example: `proxy.txt`
+
+```
+http://username:password@127.0.0.1:8080
+http://127.0.0.1:3128
+```
+
+If no proxy is provided, connection will run without proxy.
+
+---
+
+## 🚀 How to Use
+
+1. **Clone the repository** or download the files:
+   ```bash
+   git clone https://github.com/your-username/humanity-auto-claim.git
+   cd humanity-auto-claim
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Run the script**:
+   ```bash
+   npm start
+   ```
+
+---
+
+## 📦 Dependencies
+
+These packages will be installed via `npm install`:
+
+- [`node-fetch`](https://www.npmjs.com/package/node-fetch)
+- [`fetch-cookie`](https://www.npmjs.com/package/fetch-cookie)
+- [`tough-cookie`](https://www.npmjs.com/package/tough-cookie)
+- [`https-proxy-agent`](https://www.npmjs.com/package/https-proxy-agent)
+- [`chalk`](https://www.npmjs.com/package/chalk)
+- [`figlet`](https://www.npmjs.com/package/figlet)
+
+---
+
+## 🛡️ Disclaimer
+
+This bot is intended for educational and testing purposes on the Humanity Testnet only.  
+Use at your own risk.
+
+---
+
+## ✨ Contributing
+
+Pull requests and feature suggestions are welcome!
