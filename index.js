@@ -93,7 +93,12 @@ async function runAccount(index, token) {
       }
 
       const claim = await call(fetchWithCookies, proxy, token, "/api/rewards/daily/claim");
-      console.log(chalk.green(`[${index}] 🎉 Claimed ${claim.data.amount} successfully`));
+      
+      if (claim?.data?.amount) {
+        console.log(chalk.green(`[${index}] 🎉 Claimed ${claim.data.amount} successfully`));
+      } else {
+        console.log(chalk.red(`[${index}] ⚠️ Failed to claim. Response: ${JSON.stringify(claim)}`));
+      }
 
       const updatedBalance = await call(fetchWithCookies, proxy, token, "/api/rewards/balance", "GET");
       console.log(`[${index}] 💰 Updated Reward: ${updatedBalance.balance.total_rewards}`);
